@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>채용 비서 대시보드</title>
+<link rel="stylesheet" href="/static/tailwind.min.css"/>
+<script defer src="/static/alpine.min.js"></script>
+<style>
+  [x-cloak]{display:none!important}
+  .badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:9999px;font-size:12px;font-weight:600}
+  .spin{animation:spin 1s linear infinite} @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen" x-data="app()" x-init="init()" x-cloak>
+
+<!-- ── Login ─────────────────────────────────────────────────────────── -->
+<div x-show="!authed" class="min-h-screen flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-lg p-10 w-full max-w-sm">
+    <h1 class="text-2xl font-bold text-gray-800 mb-1">채용 비서</h1>
+    <p class="text-gray-500 text-sm mb-6">관리자 API 키를 입력하세요</p>
+    <input type="password" x-model="apiKeyInput" @keydown.enter="login()"
+      class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+      placeholder="X-API-Key"/>
+    <p x-show="loginError" class="text-red-500 text-xs mb-2" x-text="loginError"></p>
+    <button @click="login()" :disabled="loggingIn"
+      class="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2.5 text-sm font-semibold transition disabled:opacity-50">
+      <span x-show="!loggingIn">로그인</span>
+      <span x-show="loggingIn">확인 중...</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── Main Layout ────────────────────────────────────────────────────── -->
+<div x-show="authed" class="flex h-screen overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-white border-r border-gray-200 flex flex-col shrink-0">
+    <div class="px-5 py-5 border-b border-gray-100">
+      <p class="font-bold text-gray-800 text-lg">채용 비서</p>
+      <p class="text-xs text-gray-400 mt-0.5">Recruitment Secretary</p>
+    </div>
+    <nav class="flex-1 py-4 space-y-1 px-2">
+      <button @click="page='dashboard'" :class="page==='dashboard'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'"
+        class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+        <span>📊</span> 대시보드
+      </button>
+      <button @click="page='applications';loadApplications()" :class="page==='applications'?'bg-indigo-50 text-indigo-700':'text-gray-600 hover:bg-gray-50'"
+        class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+        <span>📋</span> 지원서 목록
+      </button>
+    </nav>
+    <div class="px-4 py-4 border-t border-gray-100">
+      <button @click="logout()" class="text-xs text-gray-400 hover:text-gray-600">로그아웃</button>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <main class="flex-1 overflow-y-auto bg-gray-50">
+
+    <!-- ── Dashboard Page ───────────────────────────────────────────── -->
+    <div x-show="page==='dashboard'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-gray-800">대시보드</h2>
+        <button @click="loadStats()" class="text-sm text-indigo-600 hover:text-indigo-800">새로고침</button>
+      </div>
+
+      <!-- Stats cards -->
+      <div x-show="stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p class="text-xs text-gray-500 mb-1">전체 지원자</p>
+          <p class="text-3xl font-bold text-gray-800" x-text="stats?.total_applications ?? '-'"></p>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p class="text-xs text-gray-500 mb-1">서류 합격률</p>
+          <p class="text-3xl font-bold text-emerald-600" x-text="stats?.pass_rate != null ? stats.pass_rate+'%' : '-'"></p>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p class="text-xs text-gray-500 mb-1">평균 서류 점수</p>
+          <p class="text-3xl font-bold text-indigo-600" x-text="stats?.avg_review_score != null ? stats.avg_review_score+'점' : '-'"></p>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p class="text-xs text-gray-500 mb-1">인터뷰 완료</p>
+          <p class="text-3xl font-bold text-gray-800" x-text="stats?.by_status?.interview_done ?? 0"></p>
+        </div>
+      </div>
+
+      <!-- Status breakdown -->
+      <div x-show="stats" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p class="text-sm font-semibold text-gray-700 mb-4">상태별 현황</p>
+          <div class="space-y-2">
+            <template x-for="[key, val] in Object.entries(stats?.by_status ?? {})" :key="key">
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-600" x-text="statusLabel(key)"></span>
+                <span class="font-semibold text-gray-800" x-text="val"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p class="text-sm font-semibold text-gray-700 mb-4">플랫폼별 지원</p>
+          <div class="space-y-2">
+            <template x-for="[key, val] in Object.entries(stats?.by_platform ?? {})" :key="key">
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-600" x-text="platformLabel(key)"></span>
+                <span class="font-semibold text-gray-800" x-text="val"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+      <div x-show="!stats" class="text-center py-20 text-gray-400">
+        <div class="spin inline-block text-3xl mb-2">⏳</div>
+        <p class="text-sm">데이터 불러오는 중...</p>
+      </div>
+    </div>
+
+    <!-- ── Applications Page ────────────────────────────────────────── -->
+    <div x-show="page==='applications'" class="p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-gray-800">지원서 목록</h2>
+        <button @click="loadApplications()" class="text-sm text-indigo-600 hover:text-indigo-800">새로고침</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4 flex flex-wrap gap-3 items-center">
+        <select x-model="filterStatus" @change="loadApplications()"
+          class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="">전체 상태</option>
+          <option value="received">접수</option>
+          <option value="reviewing">심사중</option>
+          <option value="passed">서류합격</option>
+          <option value="failed">서류불합격</option>
+          <option value="interview_invited">인터뷰초대</option>
+          <option value="interview_scheduled">일정확정</option>
+          <option value="interview_done">인터뷰완료</option>
+          <option value="hired">최종합격</option>
+          <option value="rejected">최종불합격</option>
+        </select>
+        <select x-model="filterPlatform" @change="loadApplications()"
+          class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="">전체 플랫폼</option>
+          <option value="wanted">원티드</option>
+          <option value="remember">리멤버</option>
+          <option value="groupby">그룹바이</option>
+          <option value="email">이메일</option>
+          <option value="manual">직접입력</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div x-show="appsLoading" class="text-center py-16 text-gray-400 text-sm">불러오는 중...</div>
+        <div x-show="!appsLoading && applications.length===0" class="text-center py-16 text-gray-400 text-sm">지원서가 없습니다.</div>
+        <table x-show="!appsLoading && applications.length>0" class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">#</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">지원자</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">직무</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">플랫폼</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">상태</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">점수</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">접수일</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">액션</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            <template x-for="app in applications" :key="app.id">
+              <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-3 text-gray-400" x-text="app.id"></td>
+                <td class="px-4 py-3">
+                  <p class="font-medium text-gray-800" x-text="app.applicant_name"></p>
+                  <p class="text-xs text-gray-400" x-text="app.applicant_email"></p>
+                </td>
+                <td class="px-4 py-3 text-gray-600" x-text="app.position"></td>
+                <td class="px-4 py-3">
+                  <span class="badge" :class="platformColor(app.source_platform)" x-text="platformLabel(app.source_platform)"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="badge" :class="statusColor(app.status)" x-text="statusLabel(app.status)"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <span x-show="app.review_score != null" :class="app.review_passed ? 'text-emerald-600' : 'text-red-500'" class="font-semibold" x-text="app.review_score+'점'"></span>
+                  <span x-show="app.review_score == null" class="text-gray-300">—</span>
+                </td>
+                <td class="px-4 py-3 text-gray-400 text-xs" x-text="fmtDate(app.created_at)"></td>
+                <td class="px-4 py-3">
+                  <div class="flex gap-1 flex-wrap">
+                    <!-- Review -->
+                    <button x-show="app.status==='received' || app.status==='reviewing'"
+                      @click="runAction('review', app)"
+                      :disabled="actionLoading===app.id"
+                      class="text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-40">
+                      AI 심사
+                    </button>
+                    <!-- Send invite -->
+                    <button x-show="app.status==='passed'"
+                      @click="runAction('invite', app)"
+                      :disabled="actionLoading===app.id"
+                      class="text-xs px-2 py-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
+                      초대 발송
+                    </button>
+                    <!-- Start interview -->
+                    <button x-show="app.status==='interview_scheduled'"
+                      @click="runAction('interview', app)"
+                      :disabled="actionLoading===app.id"
+                      class="text-xs px-2 py-1 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40">
+                      전화 인터뷰
+                    </button>
+                    <!-- Detail -->
+                    <button @click="openDetail(app.id)"
+                      class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">
+                      상세
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Detail Modal ───────────────────────────────────────────────────── -->
+<div x-show="detail" @click.self="detail=null"
+  class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" x-show="detail">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <h3 class="font-bold text-gray-800">지원서 상세</h3>
+      <button @click="detail=null" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+    </div>
+    <div class="px-6 py-5 space-y-5" x-show="detail">
+
+      <!-- Applicant -->
+      <section>
+        <p class="text-xs font-semibold text-gray-400 uppercase mb-2">지원자 정보</p>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><p class="text-gray-400 text-xs">이름</p><p class="font-medium" x-text="detail?.applicant?.name"></p></div>
+          <div><p class="text-gray-400 text-xs">이메일</p><p x-text="detail?.applicant?.email"></p></div>
+          <div><p class="text-gray-400 text-xs">연락처</p><p x-text="detail?.applicant?.phone||'—'"></p></div>
+          <div><p class="text-gray-400 text-xs">직무</p><p x-text="detail?.position"></p></div>
+          <div><p class="text-gray-400 text-xs">플랫폼</p>
+            <span class="badge mt-0.5" :class="platformColor(detail?.source_platform)" x-text="platformLabel(detail?.source_platform)"></span>
+          </div>
+          <div><p class="text-gray-400 text-xs">상태</p>
+            <span class="badge mt-0.5" :class="statusColor(detail?.status)" x-text="statusLabel(detail?.status)"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Review -->
+      <section x-show="detail?.review">
+        <p class="text-xs font-semibold text-gray-400 uppercase mb-2">AI 서류 심사 결과</p>
+        <div class="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl font-bold" :class="detail?.review?.passed ? 'text-emerald-600':'text-red-500'" x-text="detail?.review?.score+'점'"></span>
+            <span class="badge" :class="detail?.review?.passed ? 'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-600'" x-text="detail?.review?.passed ? '합격':'불합격'"></span>
+            <span x-show="detail?.review?.is_mock" class="text-xs text-gray-400">(모의)</span>
+          </div>
+          <p class="text-gray-700" x-text="detail?.review?.summary"></p>
+          <div x-show="detail?.review?.strengths">
+            <p class="text-xs text-gray-400 mb-0.5">강점</p>
+            <p class="text-gray-600" x-text="detail?.review?.strengths"></p>
+          </div>
+          <div x-show="detail?.review?.weaknesses">
+            <p class="text-xs text-gray-400 mb-0.5">개선 필요</p>
+            <p class="text-gray-600" x-text="detail?.review?.weaknesses"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Schedule -->
+      <section x-show="detail?.schedule">
+        <p class="text-xs font-semibold text-gray-400 uppercase mb-2">인터뷰 일정</p>
+        <div class="bg-gray-50 rounded-xl p-4 text-sm space-y-1">
+          <div class="flex gap-2"><span class="text-gray-400 w-20 shrink-0">확정 여부</span>
+            <span :class="detail?.schedule?.is_confirmed?'text-emerald-600':'text-amber-600'" x-text="detail?.schedule?.is_confirmed?'확정됨':'미확정'"></span>
+          </div>
+          <div x-show="detail?.schedule?.confirmed_slot" class="flex gap-2">
+            <span class="text-gray-400 w-20 shrink-0">확정 일정</span>
+            <span x-text="fmtDate(detail?.schedule?.confirmed_slot)"></span>
+          </div>
+          <div class="flex gap-2"><span class="text-gray-400 w-20 shrink-0">이메일</span>
+            <span x-text="detail?.schedule?.email_sent?'발송됨':'미발송'"></span>
+          </div>
+          <div class="flex gap-2"><span class="text-gray-400 w-20 shrink-0">SMS</span>
+            <span x-text="detail?.schedule?.sms_sent?'발송됨':'미발송'"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Interview result -->
+      <section x-show="detail?.interview_result">
+        <p class="text-xs font-semibold text-gray-400 uppercase mb-2">AI 전화 인터뷰 결과</p>
+        <div class="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl font-bold" :class="detail?.interview_result?.passed?'text-emerald-600':'text-red-500'" x-text="detail?.interview_result?.score+'점'"></span>
+            <span class="badge" :class="detail?.interview_result?.passed?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-600'" x-text="detail?.interview_result?.passed?'합격':'불합격'"></span>
+          </div>
+          <p class="text-gray-700" x-text="detail?.interview_result?.ai_summary"></p>
+          <details class="mt-2" x-show="detail?.interview_result?.transcript">
+            <summary class="cursor-pointer text-xs text-gray-400">대화록 보기</summary>
+            <pre class="mt-2 text-xs text-gray-600 bg-white border border-gray-100 rounded p-3 whitespace-pre-wrap" x-text="detail?.interview_result?.transcript"></pre>
+          </details>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────────────────────── -->
+<div x-show="toast" x-transition
+  class="fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-lg text-sm font-medium z-50"
+  :class="toastType==='error'?'bg-red-600 text-white':'bg-gray-900 text-white'"
+  x-text="toast"></div>
+
+<script>
+function app(){
+  return {
+    authed: !!sessionStorage.getItem('apiKey'),
+    apiKey: sessionStorage.getItem('apiKey')||'',
+    apiKeyInput:'', loginError:'', loggingIn:false,
+    page:'dashboard',
+    stats:null,
+    applications:[], appsLoading:false,
+    filterStatus:'', filterPlatform:'',
+    detail:null, detailFull:{},
+    actionLoading:null,
+    toast:'', toastType:'info', _toastTimer:null,
+
+    async init(){
+      if(this.authed) this.loadStats();
+    },
+
+    async login(){
+      this.loggingIn=true; this.loginError='';
+      try{
+        const r = await fetch('/dashboard/stats',{headers:{'X-API-Key':this.apiKeyInput}});
+        if(r.ok){
+          this.apiKey=this.apiKeyInput;
+          sessionStorage.setItem('apiKey',this.apiKey);
+          this.authed=true;
+          this.loadStats();
+        } else {
+          this.loginError='잘못된 API 키입니다.';
+        }
+      } catch(e){ this.loginError='서버에 연결할 수 없습니다.'; }
+      this.loggingIn=false;
+    },
+
+    logout(){
+      sessionStorage.removeItem('apiKey');
+      this.authed=false; this.apiKey=''; this.apiKeyInput='';
+    },
+
+    headers(){ return {'X-API-Key':this.apiKey,'Content-Type':'application/json'}; },
+
+    async loadStats(){
+      this.stats=null;
+      const r = await fetch('/dashboard/stats',{headers:this.headers()});
+      if(r.ok) this.stats = await r.json();
+    },
+
+    async loadApplications(){
+      this.appsLoading=true;
+      let url='/dashboard/applications?limit=100';
+      if(this.filterStatus) url+=`&status=${this.filterStatus}`;
+      if(this.filterPlatform) url+=`&platform=${this.filterPlatform}`;
+      const r = await fetch(url,{headers:this.headers()});
+      if(r.ok) this.applications = await r.json();
+      this.appsLoading=false;
+    },
+
+    async openDetail(id){
+      const [appR, reviewR, schedR, interviewR] = await Promise.allSettled([
+        fetch(`/dashboard/applications?limit=200`,{headers:this.headers()}),
+        fetch(`/review/${id}`,{headers:this.headers()}),
+        fetch(`/schedule/${id}`,{headers:this.headers()}),
+        fetch(`/interview/${id}/result`,{headers:this.headers()}),
+      ]);
+      const apps = appR.status==='fulfilled'&&appR.value.ok ? await appR.value.json() : [];
+      const base = apps.find(a=>a.id===id)||{};
+      const review = reviewR.status==='fulfilled'&&reviewR.value.ok ? await reviewR.value.json() : null;
+      const schedule = schedR.status==='fulfilled'&&schedR.value.ok ? await schedR.value.json() : null;
+      const interview_result = interviewR.status==='fulfilled'&&interviewR.value.ok ? await interviewR.value.json() : null;
+      this.detail = {...base, review, schedule, interview_result,
+        applicant:{name:base.applicant_name, email:base.applicant_email, phone:base.applicant_phone}};
+    },
+
+    async runAction(type, app){
+      this.actionLoading=app.id;
+      try{
+        let url, method='POST';
+        if(type==='review') url=`/review/${app.id}`;
+        else if(type==='invite') url=`/schedule/send-invite/${app.id}`;
+        else if(type==='interview') url=`/interview/start/${app.id}`;
+        const r = await fetch(url,{method,headers:this.headers()});
+        const data = await r.json();
+        if(r.ok){
+          this.showToast(type==='review'?`심사 완료 — ${data.score??data.score}점`:
+            type==='invite'?'인터뷰 초대 발송 완료':'전화 인터뷰 시작됨');
+          await this.loadApplications();
+        } else {
+          this.showToast(data.detail||'오류가 발생했습니다.','error');
+        }
+      } catch(e){ this.showToast('서버 오류','error'); }
+      this.actionLoading=null;
+    },
+
+    showToast(msg, type='info'){
+      this.toast=msg; this.toastType=type;
+      clearTimeout(this._toastTimer);
+      this._toastTimer=setTimeout(()=>this.toast='', 3500);
+    },
+
+    fmtDate(iso){
+      if(!iso) return '—';
+      const d=new Date(iso);
+      return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    },
+
+    statusLabel(s){
+      return {received:'접수',reviewing:'심사중',passed:'서류합격',failed:'서류불합격',
+        interview_invited:'인터뷰초대',interview_scheduled:'일정확정',
+        interview_done:'인터뷰완료',hired:'최종합격',rejected:'최종불합격'}[s]||s;
+    },
+    statusColor(s){
+      return {received:'bg-gray-100 text-gray-600',reviewing:'bg-blue-100 text-blue-700',
+        passed:'bg-emerald-100 text-emerald-700',failed:'bg-red-100 text-red-600',
+        interview_invited:'bg-purple-100 text-purple-700',interview_scheduled:'bg-indigo-100 text-indigo-700',
+        interview_done:'bg-amber-100 text-amber-700',hired:'bg-emerald-200 text-emerald-800',
+        rejected:'bg-gray-200 text-gray-600'}[s]||'bg-gray-100 text-gray-600';
+    },
+    platformLabel(p){
+      return {wanted:'원티드',remember:'리멤버',groupby:'그룹바이',email:'이메일',manual:'직접입력'}[p]||p;
+    },
+    platformColor(p){
+      return {wanted:'bg-blue-100 text-blue-700',remember:'bg-rose-100 text-rose-700',
+        groupby:'bg-violet-100 text-violet-700',email:'bg-gray-100 text-gray-600',
+        manual:'bg-slate-100 text-slate-600'}[p]||'bg-gray-100 text-gray-600';
+    },
+  }
+}
+</script>
+</body>
+</html>
