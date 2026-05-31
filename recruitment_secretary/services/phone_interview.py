@@ -1,118 +1,127 @@
 """
-AI phone interview service using Twilio Voice + Claude.
+AI phone interview service using VAPI (Voice AI Platform).
 
 Flow:
-  1. POST /interview/start/{id}  → Twilio initiates outbound call
-  2. Twilio calls POST /interview/webhook/voice  (TwiML: greet + first question)
-  3. Candidate answers → Gather callback → store answer, ask next question
-  4. After all questions → hang up, run AI summary
+  1. POST /interview/start/{id}  → VAPI outbound call API
+  2. VAPI manages the full conversation (STT → Claude → TTS) internally
+  3. On call end, VAPI POSTs end-of-call-report to POST /interview/webhook/vapi
+  4. Webhook saves transcript + triggers AI summary
 """
 import os
-import json
-from typing import List, Optional
+import httpx
+from typing import Optional
 
-INTERVIEW_QUESTIONS: List[str] = [
-    "간단하게 자기소개를 해주시겠어요?",
-    "지원하신 직무에 관심을 가지게 된 계기는 무엇인가요?",
-    "본인의 가장 큰 강점과 그것을 발휘한 경험을 말씀해 주세요.",
-    "팀 내 갈등 상황을 어떻게 해결하셨는지 사례를 들어 설명해 주세요.",
-    "마지막으로 저희 회사에 대해 궁금한 점이 있으신가요?",
-]
+VAPI_BASE_URL = "https://api.vapi.ai"
+
+INTERVIEW_SYSTEM_PROMPT = """\
+당신은 {company_name}의 전문 채용 AI 면접관입니다. {position} 직무 지원자와 전화 인터뷰를 진행합니다.
+
+다음 5가지 질문을 순서대로 자연스럽게 물어보세요:
+1. 간단하게 자기소개를 해주시겠어요?
+2. {position} 직무에 관심을 가지게 된 계기는 무엇인가요?
+3. 본인의 가장 큰 강점과 그것을 발휘한 경험을 말씀해 주세요.
+4. 팀 내 갈등 상황을 어떻게 해결하셨는지 사례를 들어 설명해 주세요.
+5. 마지막으로 저희 회사에 대해 궁금한 점이 있으신가요?
+
+각 답변에 짧게 호응하고 자연스럽게 다음 질문으로 넘어가세요.
+모든 질문이 끝나면 인터뷰를 정중히 마무리하고 통화를 종료하세요.
+반드시 한국어로만 대화하세요.\
+"""
 
 
 def _is_configured() -> bool:
     return all([
-        os.getenv("TWILIO_ACCOUNT_SID"),
-        os.getenv("TWILIO_AUTH_TOKEN"),
-        os.getenv("TWILIO_PHONE_NUMBER"),
+        os.getenv("VAPI_API_KEY"),
+        os.getenv("VAPI_PHONE_NUMBER_ID"),
         os.getenv("PUBLIC_BASE_URL"),
     ])
 
 
-async def initiate_call(application_id: int, phone_number: str) -> dict:
-    """Place an outbound call to the candidate. Returns call info."""
+async def initiate_call(application_id: int, phone_number: str, position: str) -> dict:
+    """Place an outbound VAPI call. Returns call info dict."""
     if not _is_configured():
         return {
-            "call_sid": f"MOCK-CALL-{application_id}",
+            "call_id": f"MOCK-VAPI-CALL-{application_id}",
             "status": "mock",
             "is_mock": True,
         }
 
-    base_url = os.getenv("PUBLIC_BASE_URL")
-    twiml_url = f"{base_url}/interview/webhook/voice?application_id={application_id}"
+    company_name = os.getenv("COMPANY_NAME", "AstarCorp")
+    base_url = os.getenv("PUBLIC_BASE_URL", "")
+    webhook_secret = os.getenv("VAPI_WEBHOOK_SECRET", "")
+
+    assistant = {
+        "name": f"{company_name} 채용 AI 면접관",
+        "firstMessage": (
+            f"안녕하세요, {company_name} {position} 채용 면접관입니다. "
+            "오늘 시간 내주셔서 감사합니다. 간단한 전화 인터뷰 진행하겠습니다."
+        ),
+        "endCallMessage": "인터뷰에 응해 주셔서 감사합니다. 검토 후 결과를 안내드리겠습니다. 좋은 하루 보내세요.",
+        "model": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-4-6",
+            "systemPrompt": INTERVIEW_SYSTEM_PROMPT.format(
+                company_name=company_name,
+                position=position,
+            ),
+            "temperature": 0.6,
+        },
+        "voice": {
+            "provider": "azure",
+            "voiceId": "ko-KR-SunHiNeural",
+        },
+        "serverUrl": f"{base_url}/interview/webhook/vapi",
+        **({"serverUrlSecret": webhook_secret} if webhook_secret else {}),
+    }
+
+    payload = {
+        "phoneNumberId": os.getenv("VAPI_PHONE_NUMBER_ID"),
+        "customer": {"number": phone_number},
+        "assistant": assistant,
+        "metadata": {"application_id": application_id},
+    }
 
     try:
-        from twilio.rest import Client
-        client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
-        call = client.calls.create(
-            to=phone_number,
-            from_=os.getenv("TWILIO_PHONE_NUMBER"),
-            url=twiml_url,
-        )
-        return {"call_sid": call.sid, "status": call.status, "is_mock": False}
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                f"{VAPI_BASE_URL}/call",
+                json=payload,
+                headers={"Authorization": f"Bearer {os.getenv('VAPI_API_KEY')}"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return {
+                "call_id": data.get("id"),
+                "status": data.get("status"),
+                "is_mock": False,
+            }
     except Exception as exc:
-        return {"call_sid": None, "status": f"error: {exc}", "is_mock": True}
+        return {"call_id": None, "status": f"error: {exc}", "is_mock": True}
 
 
-def validate_twilio_signature(url: str, params: dict, signature: str) -> bool:
-    """Returns True if signature is valid or auth token not configured (dev mode)."""
-    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-    if not auth_token:
+def validate_webhook_secret(request_secret: Optional[str]) -> bool:
+    """Returns True if secret matches or no secret is configured (dev mode)."""
+    expected = os.getenv("VAPI_WEBHOOK_SECRET")
+    if not expected:
         return True
-    try:
-        from twilio.request_validator import RequestValidator
-        validator = RequestValidator(auth_token)
-        return validator.validate(url, params, signature)
-    except Exception:
-        return False
+    return request_secret == expected
 
 
-def build_twiml_question(question: str, gather_action_url: str) -> str:
-    """Return TwiML XML that reads a question and gathers speech input."""
-    escaped = _xml_escape(question)
-    return f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{gather_action_url}" method="POST" speechTimeout="3" language="ko-KR">
-    <Say language="ko-KR" voice="Polly.Seoyeon">{escaped}</Say>
-  </Gather>
-  <Say language="ko-KR" voice="Polly.Seoyeon">답변을 듣지 못했습니다. 잠시 후 다시 연락드리겠습니다.</Say>
-</Response>"""
+def parse_end_of_call_report(payload: dict) -> Optional[dict]:
+    """
+    Extract transcript, summary, call_id from a VAPI end-of-call-report webhook.
+    Returns None if payload is not this event type.
+    """
+    message = payload.get("message", {})
+    if message.get("type") != "end-of-call-report":
+        return None
 
-
-def build_twiml_goodbye() -> str:
-    return """<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say language="ko-KR" voice="Polly.Seoyeon">
-    인터뷰에 응해 주셔서 감사합니다. 검토 후 결과를 안내드리겠습니다. 좋은 하루 되세요.
-  </Say>
-  <Hangup/>
-</Response>"""
-
-
-def append_transcript(existing: str, question: str, answer: str) -> str:
-    """Append a Q&A pair to the JSON transcript string."""
-    try:
-        pairs = json.loads(existing) if existing else []
-    except Exception:
-        pairs = []
-    pairs.append({"q": question, "a": answer})
-    return json.dumps(pairs, ensure_ascii=False)
-
-
-def format_transcript_for_summary(transcript_json: str) -> str:
-    try:
-        pairs = json.loads(transcript_json)
-        lines = [f"Q: {p['q']}\nA: {p['a']}" for p in pairs]
-        return "\n\n".join(lines)
-    except Exception:
-        return transcript_json
-
-
-def _xml_escape(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
-            .replace("'", "&apos;")
-    )
+    call = message.get("call", {})
+    return {
+        "call_id": call.get("id"),
+        "application_id": (call.get("metadata") or {}).get("application_id"),
+        "transcript": message.get("transcript", ""),
+        "vapi_summary": message.get("summary", ""),
+        "recording_url": message.get("recordingUrl"),
+        "ended_reason": call.get("endedReason"),
+    }

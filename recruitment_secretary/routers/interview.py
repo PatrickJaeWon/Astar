@@ -1,20 +1,13 @@
-import json
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request, Form
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Application, InterviewSession, InterviewResult, ApplicationStatus
+from models import Application, InterviewResult, ApplicationStatus
 from schemas import StartInterviewResponse, InterviewResultOut
 from services.phone_interview import (
-    INTERVIEW_QUESTIONS,
     initiate_call,
-    validate_twilio_signature,
-    build_twiml_question,
-    build_twiml_goodbye,
-    append_transcript,
-    format_transcript_for_summary,
+    validate_webhook_secret,
+    parse_end_of_call_report,
 )
 from services.ai_reviewer import summarize_interview
 from auth import require_api_key
@@ -42,111 +35,61 @@ async def start_interview(
     if not phone:
         raise HTTPException(status_code=400, detail="지원자의 전화번호가 등록되어 있지 않습니다.")
 
-    call_info = await initiate_call(application_id, phone)
-
-    # Create or update interview session
-    session = application.interview_session
-    if not session:
-        session = InterviewSession(
-            application_id=application_id,
-            call_sid=call_info.get("call_sid"),
-            current_question_index=0,
-            transcript="",
-        )
-        db.add(session)
-    else:
-        session.call_sid = call_info.get("call_sid")
-        session.current_question_index = 0
-        session.transcript = ""
-        session.is_complete = False
-
+    call_info = await initiate_call(application_id, phone, application.position)
     db.commit()
 
     return StartInterviewResponse(
-        call_sid=call_info.get("call_sid"),
-        message="전화 인터뷰가 시작되었습니다." if not call_info.get("is_mock") else "[MOCK] 전화 인터뷰 모의 시작",
+        call_sid=call_info.get("call_id"),
+        message="VAPI 전화 인터뷰가 시작되었습니다." if not call_info.get("is_mock") else "[MOCK] VAPI 전화 인터뷰 모의 시작",
         is_mock=call_info.get("is_mock", True),
     )
 
 
-@router.post("/webhook/voice")
-async def voice_webhook(
-    request: Request,
-    application_id: int,
-    db: Session = Depends(get_db),
-):
+@router.post("/webhook/vapi")
+async def vapi_webhook(request: Request, db: Session = Depends(get_db)):
     """
-    Twilio calls this on call answer and after each Gather response.
-    Query param: application_id
-    Form params: CallSid, SpeechResult (from Gather)
+    VAPI calls this when a call ends (end-of-call-report).
+    Saves the transcript and generates an AI summary.
     """
-    form_data = await request.form()
-    params = dict(form_data)
+    secret = request.headers.get("x-vapi-secret")
+    if not validate_webhook_secret(secret):
+        raise HTTPException(status_code=403, detail="Invalid VAPI webhook secret")
 
-    # Validate Twilio signature
-    import os
-    base_url = os.getenv("PUBLIC_BASE_URL", "")
-    webhook_url = f"{base_url}/interview/webhook/voice?application_id={application_id}"
-    signature = request.headers.get("X-Twilio-Signature", "")
-    if not validate_twilio_signature(webhook_url, params, signature):
-        raise HTTPException(status_code=403, detail="Invalid Twilio signature")
+    payload = await request.json()
+    report = parse_end_of_call_report(payload)
 
-    call_sid = params.get("CallSid", "")
-    speech_result = params.get("SpeechResult", "")
+    # Acknowledge non-report events (status-update, etc.) without processing
+    if report is None:
+        return {"status": "ignored"}
 
-    application = db.query(Application).filter(Application.id == application_id).first()
+    application_id = report.get("application_id")
+    if not application_id:
+        return {"status": "no application_id in metadata"}
+
+    application = db.query(Application).filter(Application.id == int(application_id)).first()
     if not application:
-        return Response(content=build_twiml_goodbye(), media_type="application/xml")
+        return {"status": "application not found"}
 
-    session = application.interview_session
-    if not session:
-        session = InterviewSession(
-            application_id=application_id,
-            call_sid=call_sid,
-            current_question_index=0,
-            transcript="",
-        )
-        db.add(session)
-        db.flush()
+    if application.interview_result:
+        return {"status": "already processed"}
 
-    # Store the answer to the previous question (if any)
-    if speech_result and session.current_question_index > 0:
-        prev_q = INTERVIEW_QUESTIONS[session.current_question_index - 1]
-        session.transcript = append_transcript(session.transcript, prev_q, speech_result)
+    # AI summary using Claude
+    summary_result = await summarize_interview(report["transcript"], application.position)
 
-    # Check if we've exhausted all questions
-    if session.current_question_index >= len(INTERVIEW_QUESTIONS):
-        session.is_complete = True
-        application.status = ApplicationStatus.INTERVIEW_DONE
-        db.commit()
-
-        # Generate AI summary asynchronously after hanging up
-        transcript_text = format_transcript_for_summary(session.transcript)
-        summary_result = await summarize_interview(transcript_text, application.position)
-
-        result = InterviewResult(
-            application_id=application_id,
-            call_sid=call_sid,
-            transcript=session.transcript,
-            ai_summary=summary_result.get("ai_summary"),
-            score=summary_result.get("score"),
-            passed=summary_result.get("passed"),
-            is_mock=summary_result.get("is_mock", False),
-        )
-        db.add(result)
-        db.commit()
-
-        return Response(content=build_twiml_goodbye(), media_type="application/xml")
-
-    # Ask the next question
-    current_q = INTERVIEW_QUESTIONS[session.current_question_index]
-    session.current_question_index += 1
-    session.updated_at = datetime.now(timezone.utc)
+    result = InterviewResult(
+        application_id=application.id,
+        call_sid=report["call_id"],
+        transcript=report["transcript"],
+        ai_summary=summary_result.get("ai_summary"),
+        score=summary_result.get("score"),
+        passed=summary_result.get("passed"),
+        is_mock=summary_result.get("is_mock", False),
+    )
+    db.add(result)
+    application.status = ApplicationStatus.INTERVIEW_DONE
     db.commit()
 
-    gather_url = f"{os.getenv('PUBLIC_BASE_URL', '')}/interview/webhook/voice?application_id={application_id}"
-    twiml = build_twiml_question(current_q, gather_url)
-    return Response(content=twiml, media_type="application/xml")
+    return {"status": "ok", "application_id": application.id}
 
 
 @router.get("/{application_id}/result", response_model=InterviewResultOut)

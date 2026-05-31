@@ -50,7 +50,7 @@ async def health_check():
             "POST /schedule/confirm",
             "GET  /schedule/{application_id}",
             "POST /interview/start/{application_id}",
-            "POST /interview/webhook/voice",
+            "POST /interview/webhook/vapi",
             "GET  /interview/{application_id}/result",
             "GET  /dashboard/applications",
             "GET  /dashboard/stats",

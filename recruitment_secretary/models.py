@@ -57,7 +57,6 @@ class Application(Base):
     review = relationship("ReviewResult", back_populates="application", uselist=False)
     schedule = relationship("InterviewSchedule", back_populates="application", uselist=False)
     interview_result = relationship("InterviewResult", back_populates="application", uselist=False)
-    interview_session = relationship("InterviewSession", back_populates="application", uselist=False)
 
 
 class ReviewResult(Base):
@@ -92,22 +91,6 @@ class InterviewSchedule(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     application = relationship("Application", back_populates="schedule")
-
-
-class InterviewSession(Base):
-    """Tracks stateful conversation during an AI phone interview (per TwiML callback)."""
-    __tablename__ = "interview_sessions"
-
-    id = Column(Integer, primary_key=True, index=True)
-    application_id = Column(Integer, ForeignKey("applications.id"), nullable=False, unique=True)
-    call_sid = Column(String(64), index=True)
-    current_question_index = Column(Integer, default=0)
-    transcript = Column(Text, default="")  # accumulated Q&A pairs as JSON
-    is_complete = Column(Boolean, default=False)
-    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-
-    application = relationship("Application", back_populates="interview_session")
 
 
 class InterviewResult(Base):
