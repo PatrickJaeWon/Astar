@@ -1,8 +1,11 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from database import Base, engine
 import models  # ensure all models are registered before create_all
 
@@ -32,27 +35,15 @@ app.include_router(schedule.router)
 app.include_router(interview.router)
 app.include_router(dashboard.router)
 
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
-@app.get("/", tags=["health"])
-async def health_check():
-    return {
-        "status": "ok",
-        "service": "recruitment-secretary",
-        "version": "1.0.0",
-        "endpoints": [
-            "POST /intake/wanted",
-            "POST /intake/remember",
-            "POST /intake/groupby",
-            "POST /intake/email",
-            "POST /review/{application_id}",
-            "GET  /review/{application_id}",
-            "POST /schedule/send-invite/{application_id}",
-            "POST /schedule/confirm",
-            "GET  /schedule/{application_id}",
-            "POST /interview/start/{application_id}",
-            "POST /interview/webhook/vapi",
-            "GET  /interview/{application_id}/result",
-            "GET  /dashboard/applications",
-            "GET  /dashboard/stats",
-        ],
-    }
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/ui")
+
+
+@app.get("/ui", include_in_schema=False)
+async def ui():
+    return FileResponse(os.path.join(_static_dir, "index.html"))
