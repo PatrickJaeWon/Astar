@@ -1,0 +1,13 @@
+{
+  "name": "claude-html-to-figma-design",
+  "version": "1.0.0",
+  "description": "Figma plugin to import HTML/CSS designs from Claude into Figma",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.90.4",
+    "typescript": "^5.3.3"
+  }
+}

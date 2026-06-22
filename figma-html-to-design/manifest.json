@@ -1,0 +1,11 @@
+{
+  "name": "Claude HTML to Figma Design",
+  "id": "claude-html-to-figma-design",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}
