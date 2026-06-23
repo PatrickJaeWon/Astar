@@ -19,40 +19,98 @@
 
   .header {
     background: linear-gradient(135deg, #6B46C1 0%, #553C9A 100%);
-    padding: 16px 20px;
+    padding: 14px 18px;
     color: white;
+    flex-shrink: 0;
   }
-
-  .header h1 {
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-  }
-
-  .header p {
-    font-size: 11px;
-    opacity: 0.8;
-    margin-top: 4px;
-  }
+  .header h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+  .header p { font-size: 11px; opacity: 0.75; margin-top: 2px; }
 
   .content {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
-  .section-label {
+  .tabs {
+    display: flex;
+    background: #ebebeb;
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1;
+    padding: 6px 4px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 500;
+    cursor: pointer;
     color: #666;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab.active {
+    background: white;
+    color: #6B46C1;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Drop Zone ── */
+  .drop-zone {
+    border: 2px dashed #d0c4ff;
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: #6B46C1;
+    background: #faf5ff;
+  }
+  .drop-zone.has-file {
+    border-color: #16a34a;
+    border-style: solid;
+    background: #f0fdf4;
+  }
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .drop-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+  .drop-sub { font-size: 11px; color: #888; }
+  .file-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #16a34a;
+    margin-top: 6px;
+    display: none;
+  }
+  .drop-zone.has-file .file-name { display: block; }
+  .drop-zone.has-file .drop-icon { display: none; }
+  .drop-zone.has-file .drop-sub { display: none; }
+  .drop-zone.has-file .drop-title { color: #16a34a; }
+
+  /* ── Textarea ── */
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #888;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 6px;
   }
-
   textarea {
     width: 100%;
     font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
@@ -67,84 +125,17 @@
     transition: border-color 0.15s;
     outline: none;
   }
+  textarea:focus { border-color: #6B46C1; }
+  textarea::placeholder { color: #bbb; }
 
-  textarea:focus {
-    border-color: #6B46C1;
-  }
-
-  textarea::placeholder {
-    color: #aaa;
-  }
-
-  .tabs {
-    display: flex;
-    background: #ebebeb;
-    border-radius: 8px;
-    padding: 3px;
-    gap: 2px;
-  }
-
-  .tab {
-    flex: 1;
-    padding: 6px;
-    border: none;
-    background: transparent;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    color: #666;
-    transition: all 0.15s;
-  }
-
-  .tab.active {
-    background: white;
-    color: #6B46C1;
-    font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  .options-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .option-group label {
-    display: block;
-    font-size: 11px;
-    color: #666;
-    margin-bottom: 4px;
-    font-weight: 500;
-  }
-
-  .option-group input, .option-group select {
-    width: 100%;
-    padding: 7px 10px;
-    border: 1.5px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 12px;
-    background: white;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-
-  .option-group input:focus, .option-group select:focus {
-    border-color: #6B46C1;
-  }
-
+  /* ── Preview ── */
   .preview-container {
     background: #fff;
     border: 1.5px solid #e0e0e0;
     border-radius: 8px;
     overflow: hidden;
-    position: relative;
   }
-
-  .preview-label {
+  .preview-bar {
     font-size: 10px;
     color: #999;
     padding: 6px 10px;
@@ -154,131 +145,88 @@
     justify-content: space-between;
     align-items: center;
   }
+  .preview-bar span { font-weight: 600; color: #555; }
+  #preview-wrap { position: relative; overflow: hidden; height: 0; transition: height 0.2s; }
+  #preview-iframe { border: none; display: block; transform-origin: top left; }
 
-  .preview-label span { font-weight: 600; color: #666; }
-
-  #preview-iframe {
-    width: 100%;
-    height: 200px;
-    border: none;
-    display: block;
-    transform-origin: top left;
-  }
-
+  /* ── Buttons ── */
   .btn {
-    padding: 10px 16px;
+    padding: 8px 14px;
     border: none;
-    border-radius: 8px;
-    font-size: 13px;
+    border-radius: 7px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 5px;
   }
-
   .btn-primary {
     background: linear-gradient(135deg, #6B46C1 0%, #553C9A 100%);
     color: white;
     width: 100%;
-    padding: 12px;
+    padding: 13px;
     font-size: 14px;
+    border-radius: 10px;
   }
+  .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(107,70,193,0.3); }
+  .btn-primary:active { transform: none; box-shadow: none; }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-ghost { background: #f0ecff; color: #6B46C1; }
+  .btn-ghost:hover { background: #e4deff; }
+  .btn-row { display: flex; gap: 8px; }
 
-  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(107,70,193,0.3); }
-  .btn-primary:active { transform: translateY(0); box-shadow: none; }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-
-  .btn-secondary {
-    background: #f0ecff;
-    color: #6B46C1;
-    flex: 1;
-    font-size: 12px;
-    padding: 8px;
-  }
-
-  .btn-secondary:hover { background: #e4deff; }
-
-  .status {
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 500;
-    display: none;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .status.success { background: #f0fdf4; color: #16a34a; display: flex; border: 1px solid #bbf7d0; }
-  .status.error { background: #fff1f2; color: #e11d48; display: flex; border: 1px solid #fecdd3; }
-  .status.loading { background: #faf5ff; color: #6B46C1; display: flex; border: 1px solid #e9d5ff; }
-
-  .progress-bar {
-    height: 3px;
-    background: #e9d5ff;
-    border-radius: 2px;
-    overflow: hidden;
-    display: none;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #6B46C1, #8B5CF6);
-    border-radius: 2px;
-    transition: width 0.3s;
-  }
-
-  .examples {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .example-btn {
-    padding: 8px 12px;
-    background: white;
+  /* ── Options ── */
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt label { display: block; font-size: 10px; color: #888; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .opt input, .opt select {
+    width: 100%;
+    padding: 7px 10px;
     border: 1.5px solid #e0e0e0;
     border-radius: 6px;
     font-size: 12px;
+    background: white;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .opt input:focus, .opt select:focus { border-color: #6B46C1; }
+
+  /* ── Examples ── */
+  .example-btn {
+    padding: 9px 12px;
+    background: white;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 7px;
+    font-size: 12px;
     cursor: pointer;
     text-align: left;
-    color: #444;
+    color: #333;
     transition: all 0.15s;
     display: flex;
     align-items: center;
     gap: 8px;
   }
-
   .example-btn:hover { border-color: #6B46C1; color: #6B46C1; background: #faf5ff; }
+  .example-btn .badge { font-size: 10px; background: #f0ecff; color: #6B46C1; padding: 2px 7px; border-radius: 4px; font-weight: 600; margin-left: auto; }
 
-  .example-btn .badge {
-    font-size: 10px;
-    background: #f0ecff;
-    color: #6B46C1;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 600;
-  }
+  /* ── Status ── */
+  .status { padding: 9px 13px; border-radius: 8px; font-size: 12px; font-weight: 500; display: none; align-items: center; gap: 7px; }
+  .status.success { background: #f0fdf4; color: #16a34a; display: flex; border: 1px solid #bbf7d0; }
+  .status.error   { background: #fff1f2; color: #e11d48; display: flex; border: 1px solid #fecdd3; }
+  .status.loading { background: #faf5ff; color: #6B46C1; display: flex; border: 1px solid #e9d5ff; }
 
-  .footer-actions {
-    display: flex;
-    gap: 8px;
-  }
+  .progress-bar { height: 3px; background: #e9d5ff; border-radius: 2px; overflow: hidden; display: none; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #6B46C1, #8B5CF6); border-radius: 2px; transition: width 0.4s; }
 
-  .dot-pulse {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-    animation: pulse 1.2s infinite;
-  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+  .js-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; background: #fff7ed; color: #c2410c; padding: 3px 8px;
+    border-radius: 5px; border: 1px solid #fed7aa; font-weight: 600;
   }
 </style>
 </head>
@@ -286,362 +234,259 @@
 
 <div class="header">
   <h1>Claude HTML → Figma</h1>
-  <p>Claude가 생성한 HTML 디자인을 Figma로 가져오기</p>
+  <p>HTML 파일 또는 코드를 Figma 디자인으로 변환</p>
 </div>
 
 <div class="content">
 
-  <!-- Tabs -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('paste')">HTML 붙여넣기</button>
-    <button class="tab" onclick="switchTab('examples')">예시 템플릿</button>
+    <button class="tab active" onclick="switchTab('upload')">파일 업로드</button>
+    <button class="tab" onclick="switchTab('paste')">코드 붙여넣기</button>
+    <button class="tab" onclick="switchTab('examples')">예시</button>
     <button class="tab" onclick="switchTab('options')">옵션</button>
   </div>
 
-  <!-- Paste Tab -->
-  <div id="tab-paste" class="tab-panel active">
-    <div class="section-label">HTML 코드</div>
-    <textarea
-      id="html-input"
-      rows="10"
-      placeholder="Claude가 생성한 HTML을 여기에 붙여넣으세요...
+  <!-- ── 파일 업로드 Tab ── -->
+  <div id="tab-upload" class="tab-panel active">
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept=".html,.htm" />
+      <div class="drop-icon">📂</div>
+      <div class="drop-title">HTML 파일을 여기에 드래그하거나 클릭</div>
+      <div class="drop-sub">.html / .htm 파일 지원</div>
+      <div class="file-name" id="file-name-label"></div>
+    </div>
 
-예시:
-<div style=&quot;background:#6B46C1;padding:24px;border-radius:12px;&quot;>
-  <h1 style=&quot;color:white;font-size:24px;&quot;>Hello Figma!</h1>
-  <p style=&quot;color:rgba(255,255,255,0.8);&quot;>AI 디자인을 가져옵니다</p>
-</div>"
-    ></textarea>
-
-    <div style="display:flex;gap:8px;margin-top:4px;">
-      <button class="btn btn-secondary" onclick="previewHTML()">미리보기</button>
-      <button class="btn btn-secondary" onclick="clearAll()">초기화</button>
+    <div id="js-warning" style="display:none;" class="js-badge">
+      ⚡ JS 번들 파일 감지됨 — 렌더링 시간이 더 걸릴 수 있습니다
     </div>
 
     <div class="preview-container">
-      <div class="preview-label">
+      <div class="preview-bar">
         <span>미리보기</span>
-        <span id="preview-size" style="font-size:10px;color:#aaa"></span>
+        <span id="preview-size" style="font-weight:400;color:#aaa"></span>
       </div>
-      <iframe id="preview-iframe" sandbox="allow-same-origin"></iframe>
+      <div id="preview-wrap">
+        <iframe id="preview-iframe" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+      </div>
     </div>
   </div>
 
-  <!-- Examples Tab -->
+  <!-- ── 코드 붙여넣기 Tab ── -->
+  <div id="tab-paste" class="tab-panel">
+    <div class="section-label">HTML 코드</div>
+    <textarea id="html-input" rows="10" placeholder="Claude가 생성한 HTML을 붙여넣으세요..."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="previewFromTextarea()">미리보기</button>
+      <button class="btn btn-ghost" onclick="clearAll()">초기화</button>
+    </div>
+    <div class="preview-container">
+      <div class="preview-bar">
+        <span>미리보기</span>
+        <span id="preview-size-paste" style="font-weight:400;color:#aaa"></span>
+      </div>
+      <div id="preview-wrap-paste">
+        <iframe id="preview-iframe-paste" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 예시 Tab ── -->
   <div id="tab-examples" class="tab-panel">
-    <div class="section-label">예시 템플릿 선택</div>
-    <div class="examples">
-      <button class="example-btn" onclick="loadExample('card')">
-        <span>📇</span>
-        <span style="flex:1">카드 컴포넌트</span>
-        <span class="badge">Card</span>
-      </button>
-      <button class="example-btn" onclick="loadExample('hero')">
-        <span>🎨</span>
-        <span style="flex:1">히어로 섹션</span>
-        <span class="badge">Hero</span>
-      </button>
-      <button class="example-btn" onclick="loadExample('button')">
-        <span>🔘</span>
-        <span style="flex:1">버튼 컴포넌트 모음</span>
-        <span class="badge">Buttons</span>
-      </button>
-      <button class="example-btn" onclick="loadExample('form')">
-        <span>📝</span>
-        <span style="flex:1">로그인 폼</span>
-        <span class="badge">Form</span>
-      </button>
-      <button class="example-btn" onclick="loadExample('nav')">
-        <span>🧭</span>
-        <span style="flex:1">네비게이션 바</span>
-        <span class="badge">Nav</span>
-      </button>
-      <button class="example-btn" onclick="loadExample('dashboard')">
-        <span>📊</span>
-        <span style="flex:1">대시보드 카드</span>
-        <span class="badge">Dashboard</span>
-      </button>
-    </div>
+    <div class="section-label">예시 템플릿</div>
+    <button class="example-btn" onclick="loadExample('card')"><span>📇</span> 카드 컴포넌트 <span class="badge">Card</span></button>
+    <button class="example-btn" onclick="loadExample('hero')"><span>🎨</span> 히어로 섹션 <span class="badge">Hero</span></button>
+    <button class="example-btn" onclick="loadExample('button')"><span>🔘</span> 버튼 모음 <span class="badge">Buttons</span></button>
+    <button class="example-btn" onclick="loadExample('form')"><span>📝</span> 로그인 폼 <span class="badge">Form</span></button>
+    <button class="example-btn" onclick="loadExample('nav')"><span>🧭</span> 내비게이션 바 <span class="badge">Nav</span></button>
+    <button class="example-btn" onclick="loadExample('dashboard')"><span>📊</span> 대시보드 카드 <span class="badge">Dashboard</span></button>
   </div>
 
-  <!-- Options Tab -->
+  <!-- ── 옵션 Tab ── -->
   <div id="tab-options" class="tab-panel">
-    <div class="section-label">가져오기 옵션</div>
+    <div class="section-label">캔버스 설정</div>
     <div class="options-grid">
-      <div class="option-group">
-        <label>캔버스 너비</label>
-        <input type="number" id="opt-width" value="1440" min="320" max="4096" />
-      </div>
-      <div class="option-group">
-        <label>캔버스 높이</label>
-        <input type="number" id="opt-height" value="900" min="100" max="4096" />
-      </div>
-      <div class="option-group">
-        <label>최소 요소 크기 (px)</label>
-        <input type="number" id="opt-min-size" value="2" min="1" max="20" />
-      </div>
-      <div class="option-group">
-        <label>렌더링 스케일</label>
-        <select id="opt-scale">
-          <option value="1">1x (기본)</option>
-          <option value="1.5">1.5x</option>
-          <option value="2">2x (고해상도)</option>
+      <div class="opt"><label>캔버스 너비</label><input type="number" id="opt-width" value="1440" min="320" max="4096" /></div>
+      <div class="opt"><label>캔버스 높이</label><input type="number" id="opt-height" value="900" min="100" max="4096" /></div>
+      <div class="opt"><label>렌더링 너비</label><input type="number" id="opt-render-width" value="1440" min="320" max="2560" /></div>
+      <div class="opt"><label>최소 요소 크기</label><input type="number" id="opt-min-size" value="2" min="1" max="20" /></div>
+    </div>
+    <div style="margin-top:10px;">
+      <div class="opt"><label>JS 렌더링 대기 시간 (ms)</label>
+        <select id="opt-wait">
+          <option value="500">빠름 (500ms) — 정적 HTML</option>
+          <option value="2000" selected>보통 (2초) — 일반 JS</option>
+          <option value="4000">느림 (4초) — 번들 파일</option>
+          <option value="7000">매우 느림 (7초) — 무거운 번들</option>
         </select>
-      </div>
-    </div>
-    <div style="margin-top:12px;">
-      <div class="section-label">렌더링 너비</div>
-      <div class="option-group">
-        <input type="number" id="opt-render-width" value="1440" min="320" max="2560" />
-        <p style="font-size:10px;color:#999;margin-top:4px;">HTML을 이 너비로 렌더링 후 Figma로 변환합니다</p>
+        <p style="font-size:10px;color:#aaa;margin-top:4px;">JS로 렌더링되는 HTML은 대기 시간을 늘리세요</p>
       </div>
     </div>
   </div>
 
-  <!-- Status -->
   <div id="status" class="status"></div>
-  <div class="progress-bar" id="progress-bar">
-    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-  </div>
+  <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
 
-  <!-- Action Button -->
-  <div class="footer-actions">
-    <button class="btn btn-primary" id="import-btn" onclick="importToFigma()">
-      ✦ Figma로 가져오기
-    </button>
-  </div>
+  <button class="btn btn-primary" id="import-btn" onclick="importToFigma()">✦ Figma로 가져오기</button>
 
 </div>
 
 <script>
-// ─── Tab Navigation ───────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentHTML = ''; // HTML to import (from file OR textarea)
+let currentSource = 'upload'; // 'upload' | 'paste'
+
+// ── Tab Navigation ─────────────────────────────────────────────────────────────
+const TAB_NAMES = ['upload', 'paste', 'examples', 'options'];
 function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    const tabs = ['paste', 'examples', 'options'];
-    t.classList.toggle('active', tabs[i] === name);
-  });
-  document.querySelectorAll('.tab-panel').forEach(p => {
-    p.classList.toggle('active', p.id === 'tab-' + name);
-  });
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', TAB_NAMES[i] === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  if (name === 'upload' || name === 'paste') currentSource = name;
 }
 
-// ─── Preview ──────────────────────────────────────────────────────────────────
-function previewHTML() {
-  const html = document.getElementById('html-input').value.trim();
-  if (!html) return;
-  const iframe = document.getElementById('preview-iframe');
+// ── File Upload ───────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    currentHTML = ev.target.result;
+    document.getElementById('file-name-label').textContent = '✓ ' + file.name;
+    dropZone.classList.add('has-file');
+    dropZone.querySelector('.drop-title').textContent = file.name;
+    const isBundled = isJSBundled(currentHTML);
+    document.getElementById('js-warning').style.display = isBundled ? 'inline-flex' : 'none';
+    if (isBundled) document.getElementById('opt-wait').value = '4000';
+    renderPreview(currentHTML, 'preview-iframe', 'preview-wrap', 'preview-size');
+    showStatus('파일 로드 완료: ' + file.name, 'success');
+  };
+  reader.readAsText(file);
+}
+
+function isJSBundled(html) {
+  return html.includes('__bundler/manifest') || html.includes('__bundler/template') || html.includes('DOMContentLoaded');
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+function renderPreview(html, iframeId, wrapId, sizeId) {
+  const iframe = document.getElementById(iframeId);
+  const wrap = document.getElementById(wrapId);
   const renderWidth = parseInt(document.getElementById('opt-render-width').value) || 1440;
+  const previewW = 484;
+  const scale = previewW / renderWidth;
+  const previewH = Math.min(360, Math.round(renderWidth * 0.6 * scale));
+
   iframe.style.width = renderWidth + 'px';
-  const scale = 480 / renderWidth;
+  iframe.style.height = Math.round(renderWidth * 0.7) + 'px';
   iframe.style.transform = `scale(${scale})`;
   iframe.style.transformOrigin = 'top left';
-  iframe.style.height = '600px';
-  iframe.parentElement.style.height = (600 * scale + 30) + 'px';
+  wrap.style.height = Math.round(renderWidth * 0.7 * scale) + 'px';
 
-  const doc = iframe.contentDocument || iframe.contentWindow.document;
-  doc.open();
-  doc.write(`<!DOCTYPE html><html><head>
-    <meta charset="UTF-8">
-    <style>
-      * { box-sizing: border-box; }
-      body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    </style>
-  </head><body>${html}</body></html>`);
-  doc.close();
+  // Use srcdoc so scripts execute
+  iframe.srcdoc = html;
 
-  const w = iframe.contentDocument.body.scrollWidth;
-  const h = iframe.contentDocument.body.scrollHeight;
-  document.getElementById('preview-size').textContent = `${w} × ${h}px`;
+  iframe.onload = () => {
+    try {
+      const doc = iframe.contentDocument;
+      if (doc) {
+        const w = doc.body ? doc.body.scrollWidth : renderWidth;
+        const h = doc.body ? doc.body.scrollHeight : 0;
+        document.getElementById(sizeId).textContent = `${w} × ${h}px`;
+      }
+    } catch(e) {}
+  };
+}
+
+function previewFromTextarea() {
+  const html = document.getElementById('html-input').value.trim();
+  if (!html) return;
+  currentHTML = html;
+  currentSource = 'paste';
+  renderPreview(html, 'preview-iframe-paste', 'preview-wrap-paste', 'preview-size-paste');
 }
 
 function clearAll() {
   document.getElementById('html-input').value = '';
-  const iframe = document.getElementById('preview-iframe');
-  const doc = iframe.contentDocument || iframe.contentWindow.document;
-  doc.open(); doc.write(''); doc.close();
-  document.getElementById('preview-size').textContent = '';
+  currentHTML = '';
+  const iframe = document.getElementById('preview-iframe-paste');
+  iframe.srcdoc = '';
+  document.getElementById('preview-wrap-paste').style.height = '0';
 }
 
-// ─── Examples ─────────────────────────────────────────────────────────────────
-const EXAMPLES = {
-  card: `<div style="width:320px;background:white;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08);padding:24px;font-family:-apple-system,sans-serif;">
-  <div style="width:48px;height:48px;background:linear-gradient(135deg,#6B46C1,#8B5CF6);border-radius:12px;margin-bottom:16px;"></div>
-  <h3 style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:8px;">디자인 카드</h3>
-  <p style="font-size:14px;color:#666;line-height:1.6;margin-bottom:20px;">Claude가 만든 컴포넌트를 Figma로 가져옵니다. 간단하고 빠르게 디자인 작업을 시작하세요.</p>
-  <div style="display:flex;gap:8px;">
-    <button style="flex:1;padding:10px;background:#6B46C1;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">시작하기</button>
-    <button style="flex:1;padding:10px;background:#f5f3ff;color:#6B46C1;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">더 보기</button>
-  </div>
-</div>`,
-
-  hero: `<div style="width:1200px;background:linear-gradient(135deg,#1a0533 0%,#2d1057 50%,#1a0533 100%);padding:80px 120px;font-family:-apple-system,sans-serif;position:relative;overflow:hidden;">
-  <div style="position:absolute;top:-100px;right:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(139,92,246,0.3),transparent);border-radius:50%;"></div>
-  <div style="position:relative;max-width:600px;">
-    <span style="display:inline-block;background:rgba(139,92,246,0.2);color:#a78bfa;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:24px;border:1px solid rgba(139,92,246,0.3);">✦ AI 디자인 도구</span>
-    <h1 style="font-size:56px;font-weight:800;color:white;line-height:1.1;margin-bottom:20px;letter-spacing:-1px;">Claude로 만드는<br/><span style="color:#a78bfa;">디자인 시스템</span></h1>
-    <p style="font-size:18px;color:rgba(255,255,255,0.7);line-height:1.6;margin-bottom:40px;">AI가 생성한 컴포넌트를 Figma로 바로 가져와 디자인 작업을 빠르게 시작하세요.</p>
-    <div style="display:flex;gap:16px;">
-      <button style="padding:16px 32px;background:linear-gradient(135deg,#7C3AED,#6B46C1);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;">지금 시작하기</button>
-      <button style="padding:16px 32px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;">데모 보기</button>
-    </div>
-  </div>
-</div>`,
-
-  button: `<div style="padding:32px;background:#fafafa;font-family:-apple-system,sans-serif;display:flex;flex-direction:column;gap:24px;">
-  <div>
-    <p style="font-size:12px;color:#999;margin-bottom:12px;font-weight:600;">PRIMARY BUTTONS</p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <button style="padding:10px 20px;background:#6B46C1;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;">기본</button>
-      <button style="padding:10px 20px;background:#7C3AED;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;opacity:0.9;">호버</button>
-      <button style="padding:10px 20px;background:#553C9A;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;">클릭</button>
-      <button style="padding:10px 20px;background:#ccc;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;">비활성</button>
-    </div>
-  </div>
-  <div>
-    <p style="font-size:12px;color:#999;margin-bottom:12px;font-weight:600;">OUTLINE BUTTONS</p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <button style="padding:10px 20px;background:transparent;color:#6B46C1;border:2px solid #6B46C1;border-radius:8px;font-size:14px;font-weight:600;">기본</button>
-      <button style="padding:10px 20px;background:transparent;color:#e11d48;border:2px solid #e11d48;border-radius:8px;font-size:14px;font-weight:600;">위험</button>
-      <button style="padding:10px 20px;background:transparent;color:#16a34a;border:2px solid #16a34a;border-radius:8px;font-size:14px;font-weight:600;">성공</button>
-    </div>
-  </div>
-  <div>
-    <p style="font-size:12px;color:#999;margin-bottom:12px;font-weight:600;">SIZES</p>
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-      <button style="padding:6px 14px;background:#6B46C1;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;">Small</button>
-      <button style="padding:10px 20px;background:#6B46C1;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;">Medium</button>
-      <button style="padding:14px 28px;background:#6B46C1;color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;">Large</button>
-    </div>
-  </div>
-</div>`,
-
-  form: `<div style="width:400px;background:white;border-radius:20px;padding:40px;box-shadow:0 8px 40px rgba(0,0,0,0.1);font-family:-apple-system,sans-serif;">
-  <div style="text-align:center;margin-bottom:32px;">
-    <div style="width:48px;height:48px;background:linear-gradient(135deg,#6B46C1,#8B5CF6);border-radius:14px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;"></div>
-    <h2 style="font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">로그인</h2>
-    <p style="font-size:14px;color:#888;">계정에 로그인하세요</p>
-  </div>
-  <div style="margin-bottom:16px;">
-    <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:6px;">이메일</label>
-    <div style="padding:12px 16px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;color:#999;">이메일을 입력하세요</div>
-  </div>
-  <div style="margin-bottom:24px;">
-    <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:6px;">비밀번호</label>
-    <div style="padding:12px 16px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;color:#999;">비밀번호를 입력하세요</div>
-    <div style="text-align:right;margin-top:6px;"><span style="font-size:12px;color:#6B46C1;font-weight:600;">비밀번호 찾기</span></div>
-  </div>
-  <button style="width:100%;padding:14px;background:linear-gradient(135deg,#6B46C1,#7C3AED);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px;">로그인</button>
-  <p style="text-align:center;font-size:13px;color:#888;">계정이 없으신가요? <span style="color:#6B46C1;font-weight:600;">회원가입</span></p>
-</div>`,
-
-  nav: `<nav style="width:100%;background:white;border-bottom:1px solid #f0f0f0;padding:0 40px;height:60px;display:flex;align-items:center;justify-content:space-between;font-family:-apple-system,sans-serif;box-shadow:0 1px 8px rgba(0,0,0,0.05);">
-  <div style="display:flex;align-items:center;gap:8px;">
-    <div style="width:32px;height:32px;background:linear-gradient(135deg,#6B46C1,#8B5CF6);border-radius:8px;"></div>
-    <span style="font-size:16px;font-weight:700;color:#1a1a1a;">Astar</span>
-  </div>
-  <div style="display:flex;gap:32px;">
-    <a style="text-decoration:none;font-size:14px;font-weight:500;color:#6B46C1;">홈</a>
-    <a style="text-decoration:none;font-size:14px;font-weight:500;color:#666;">서비스</a>
-    <a style="text-decoration:none;font-size:14px;font-weight:500;color:#666;">가격</a>
-    <a style="text-decoration:none;font-size:14px;font-weight:500;color:#666;">문의</a>
-  </div>
-  <div style="display:flex;gap:12px;align-items:center;">
-    <button style="padding:8px 16px;background:transparent;color:#666;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">로그인</button>
-    <button style="padding:8px 16px;background:#6B46C1;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">시작하기</button>
-  </div>
-</nav>`,
-
-  dashboard: `<div style="padding:32px;background:#f8f7ff;font-family:-apple-system,sans-serif;min-width:800px;">
-  <h2 style="font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:20px;">대시보드</h2>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
-    <div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-        <span style="font-size:13px;color:#888;font-weight:500;">총 사용자</span>
-        <span style="font-size:11px;background:#f0fdf4;color:#16a34a;padding:3px 8px;border-radius:6px;font-weight:600;">+12%</span>
-      </div>
-      <div style="font-size:28px;font-weight:800;color:#1a1a1a;">24,521</div>
-      <div style="font-size:12px;color:#999;margin-top:4px;">지난 달 대비</div>
-    </div>
-    <div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-        <span style="font-size:13px;color:#888;font-weight:500;">매출</span>
-        <span style="font-size:11px;background:#f0fdf4;color:#16a34a;padding:3px 8px;border-radius:6px;font-weight:600;">+8%</span>
-      </div>
-      <div style="font-size:28px;font-weight:800;color:#1a1a1a;">₩4.2M</div>
-      <div style="font-size:12px;color:#999;margin-top:4px;">이번 달</div>
-    </div>
-    <div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-        <span style="font-size:13px;color:#888;font-weight:500;">전환율</span>
-        <span style="font-size:11px;background:#fff1f2;color:#e11d48;padding:3px 8px;border-radius:6px;font-weight:600;">-2%</span>
-      </div>
-      <div style="font-size:28px;font-weight:800;color:#1a1a1a;">3.8%</div>
-      <div style="font-size:12px;color:#999;margin-top:4px;">방문자 → 구매</div>
-    </div>
-  </div>
-</div>`
-};
-
-function loadExample(name) {
-  const html = EXAMPLES[name];
-  if (!html) return;
-  document.getElementById('html-input').value = html;
-  switchTab('paste');
-  previewHTML();
-  showStatus('예시 템플릿이 로드되었습니다. 미리보기를 확인하세요.', 'success');
-}
-
-// ─── Color Parsing ────────────────────────────────────────────────────────────
+// ── Color Helpers ─────────────────────────────────────────────────────────────
+const _colorCache = {};
 function parseColor(colorStr) {
-  if (!colorStr || colorStr === 'transparent' || colorStr === 'rgba(0, 0, 0, 0)') {
-    return { r: 0, g: 0, b: 0, a: 0 };
-  }
-  const div = document.createElement('div');
+  if (!colorStr || colorStr === 'transparent') return { r:0, g:0, b:0, a:0 };
+  if (_colorCache[colorStr]) return _colorCache[colorStr];
+
+  // Reuse a hidden div for color parsing
+  const div = _colorDiv || (_colorDiv = (() => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
+    document.body.appendChild(d); return d;
+  })());
   div.style.color = colorStr;
-  document.body.appendChild(div);
   const computed = window.getComputedStyle(div).color;
-  document.body.removeChild(div);
+  const m = computed.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/);
+  const result = m
+    ? { r: +m[1]/255, g: +m[2]/255, b: +m[3]/255, a: m[4]!=null ? +m[4] : 1 }
+    : { r:0, g:0, b:0, a:0 };
+  _colorCache[colorStr] = result;
+  return result;
+}
+let _colorDiv = null;
 
-  const m = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-  if (m) {
-    return {
-      r: parseInt(m[1]) / 255,
-      g: parseInt(m[2]) / 255,
-      b: parseInt(m[3]) / 255,
-      a: m[4] !== undefined ? parseFloat(m[4]) : 1
-    };
+function extractFirstColor(cssColor) {
+  // Extract first color token from gradient or solid color
+  const m = cssColor.match(/rgba?\([^)]+\)|#[0-9a-fA-F]{3,8}/);
+  return m ? parseColor(m[0]) : null;
+}
+
+function getBackground(style) {
+  const bg = style.backgroundColor;
+  // If solid color (not fully transparent), use it
+  if (bg && bg !== 'rgba(0, 0, 0, 0)') return parseColor(bg);
+  // Try gradient / backgroundImage
+  const bgImg = style.backgroundImage;
+  if (bgImg && bgImg !== 'none') {
+    const col = extractFirstColor(bgImg);
+    if (col && col.a > 0) return col;
   }
-  return { r: 0, g: 0, b: 0, a: 0 };
+  return { r:0, g:0, b:0, a:0 };
 }
 
-function parsePx(val) {
-  if (!val) return 0;
-  return parseFloat(val) || 0;
-}
+function parsePx(val) { return parseFloat(val) || 0; }
 
-// ─── DOM Traversal ─────────────────────────────────────────────────────────────
-function traverseElement(el, containerRect, doc) {
+// ── DOM Traversal ─────────────────────────────────────────────────────────────
+function traverseElement(el, containerRect, iWin, minSize) {
   const rect = el.getBoundingClientRect();
-  const style = doc.defaultView.getComputedStyle(el);
+  const style = iWin.getComputedStyle(el);
 
   const x = rect.left - containerRect.left;
   const y = rect.top - containerRect.top;
   const width = rect.width;
   const height = rect.height;
 
-  const minSize = parseInt(document.getElementById('opt-min-size').value) || 2;
   if (width < minSize || height < minSize) return null;
+  if (style.display === 'none' || style.visibility === 'hidden') return null;
 
-  const bgColor = parseColor(style.backgroundColor);
+  const bgColor = getBackground(style);
   const textColor = parseColor(style.color);
-  const borderColor = parseColor(style.borderColor);
+  const borderColor = parseColor(style.borderTopColor);
 
-  // Collect direct text
   let directText = '';
   for (const node of el.childNodes) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      directText += node.textContent;
-    }
+    if (node.nodeType === Node.TEXT_NODE) directText += node.textContent;
   }
   directText = directText.trim();
 
@@ -652,7 +497,7 @@ function traverseElement(el, containerRect, doc) {
     backgroundColor: bgColor,
     borderRadius: parsePx(style.borderTopLeftRadius),
     borderWidth: parsePx(style.borderTopWidth),
-    borderColor: borderColor,
+    borderColor,
     opacity: parseFloat(style.opacity) || 1,
     text: directText || null,
     fontSize: parsePx(style.fontSize) || 16,
@@ -670,126 +515,160 @@ function traverseElement(el, containerRect, doc) {
     children: []
   };
 
-  // Recurse into children
   for (const child of el.children) {
-    const childData = traverseElement(child, containerRect, doc);
+    const childData = traverseElement(child, containerRect, iWin, minSize);
     if (childData) data.children.push(childData);
   }
 
   return data;
 }
 
-// ─── Import ────────────────────────────────────────────────────────────────────
+function countElements(elements) {
+  let n = elements.length;
+  for (const el of elements) n += countElements(el.children);
+  return n;
+}
+
+// ── Import ────────────────────────────────────────────────────────────────────
 function importToFigma() {
-  const html = document.getElementById('html-input').value.trim();
+  // Determine HTML source
+  const html = currentSource === 'paste'
+    ? document.getElementById('html-input').value.trim()
+    : currentHTML;
+
   if (!html) {
-    showStatus('HTML을 먼저 입력하세요.', 'error');
+    showStatus('HTML 파일을 업로드하거나 코드를 붙여넣으세요.', 'error');
     return;
   }
 
   setLoading(true);
-  showStatus('HTML을 분석 중...', 'loading');
+  setProgress(10);
+  showStatus('HTML 렌더링 중...', 'loading');
 
-  // Render in hidden iframe to get computed styles
   const renderWidth = parseInt(document.getElementById('opt-render-width').value) || 1440;
+  const waitMs = parseInt(document.getElementById('opt-wait').value) || 2000;
+  const canvasWidth = parseInt(document.getElementById('opt-width').value) || 1440;
+  const canvasHeight = parseInt(document.getElementById('opt-height').value) || 900;
+  const minSize = parseInt(document.getElementById('opt-min-size').value) || 2;
+
+  // Create hidden iframe (no sandbox = scripts allowed)
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = `position:fixed;left:-9999px;top:-9999px;width:${renderWidth}px;height:2000px;border:none;visibility:hidden;`;
+  iframe.style.cssText = `position:fixed;left:-9999px;top:-9999px;width:${renderWidth}px;height:6000px;border:none;opacity:0;pointer-events:none;`;
   document.body.appendChild(iframe);
 
-  const iDoc = iframe.contentDocument || iframe.contentWindow.document;
-  iDoc.open();
-  iDoc.write(`<!DOCTYPE html><html><head>
-    <meta charset="UTF-8">
-    <style>
-      * { box-sizing: border-box; }
-      body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    </style>
-  </head><body>${html}</body></html>`);
-  iDoc.close();
+  // Use srcdoc so scripts execute
+  iframe.srcdoc = html;
 
-  // Wait for render
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
+  setProgress(25);
+
+  iframe.addEventListener('load', () => {
+    showStatus(`렌더링 대기 중 (${waitMs/1000}초)...`, 'loading');
+    setProgress(40);
+
+    setTimeout(() => {
       try {
+        const iDoc = iframe.contentDocument;
+        const iWin = iframe.contentWindow;
+        if (!iDoc || !iDoc.body) throw new Error('문서를 읽을 수 없습니다');
+
+        setProgress(65);
+        showStatus('요소 분석 중...', 'loading');
+
         const body = iDoc.body;
         const containerRect = body.getBoundingClientRect();
-        const canvasWidth = parseInt(document.getElementById('opt-width').value) || 1440;
-        const canvasHeight = parseInt(document.getElementById('opt-height').value) || 900;
-
         const elements = [];
+
         for (const child of body.children) {
-          const data = traverseElement(child, containerRect, iDoc);
+          const data = traverseElement(child, containerRect, iWin, minSize);
           if (data) elements.push(data);
         }
 
         document.body.removeChild(iframe);
 
         if (elements.length === 0) {
-          showStatus('변환 가능한 요소를 찾지 못했습니다. HTML을 확인하세요.', 'error');
+          showStatus('변환할 요소를 찾지 못했습니다. 대기 시간을 늘려보세요.', 'error');
           setLoading(false);
           return;
         }
 
-        showStatus(`${countElements(elements)}개 요소를 Figma로 전송 중...`, 'loading');
-        setProgress(70);
+        const total = countElements(elements);
+        showStatus(`${total}개 요소를 Figma로 전송 중...`, 'loading');
+        setProgress(85);
 
-        parent.postMessage({
-          pluginMessage: { type: 'import-html', elements, canvasWidth, canvasHeight }
-        }, '*');
+        parent.postMessage({ pluginMessage: { type: 'import-html', elements, canvasWidth, canvasHeight } }, '*');
 
       } catch (err) {
         if (document.body.contains(iframe)) document.body.removeChild(iframe);
-        showStatus('오류: ' + err.message, 'error');
+        showStatus('오류: ' + (err.message || err), 'error');
         setLoading(false);
       }
-    });
+    }, waitMs);
   });
 }
 
-function countElements(elements) {
-  let count = elements.length;
-  for (const el of elements) count += countElements(el.children);
-  return count;
+// ── Examples ──────────────────────────────────────────────────────────────────
+const EXAMPLES = {
+  card: `<div style="padding:40px;background:#f5f3ff;font-family:-apple-system,sans-serif;"><div style="width:320px;background:white;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08);padding:24px;"><div style="width:48px;height:48px;background:linear-gradient(135deg,#6B46C1,#8B5CF6);border-radius:12px;margin-bottom:16px;"></div><h3 style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:8px;">디자인 카드</h3><p style="font-size:14px;color:#666;line-height:1.6;margin-bottom:20px;">Claude가 만든 컴포넌트를 Figma로 바로 가져옵니다.</p><div style="display:flex;gap:8px;"><button style="flex:1;padding:10px;background:#6B46C1;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;">시작하기</button><button style="flex:1;padding:10px;background:#f5f3ff;color:#6B46C1;border:none;border-radius:8px;font-size:13px;font-weight:600;">더 보기</button></div></div></div>`,
+
+  hero: `<div style="width:100%;background:linear-gradient(135deg,#1a0533,#2d1057,#1a0533);padding:80px 120px;font-family:-apple-system,sans-serif;"><div style="max-width:600px;"><span style="display:inline-block;background:rgba(139,92,246,0.2);color:#a78bfa;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:24px;border:1px solid rgba(139,92,246,0.3);">✦ AI 디자인 도구</span><h1 style="font-size:52px;font-weight:800;color:white;line-height:1.1;margin-bottom:20px;">Claude로 만드는<br/><span style="color:#a78bfa;">디자인 시스템</span></h1><p style="font-size:18px;color:rgba(255,255,255,0.7);line-height:1.6;margin-bottom:40px;">AI가 생성한 컴포넌트를 Figma로 바로 가져와 디자인 작업을 빠르게 시작하세요.</p><div style="display:flex;gap:16px;"><button style="padding:16px 32px;background:#7C3AED;color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;">지금 시작하기</button><button style="padding:16px 32px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);border-radius:12px;font-size:16px;font-weight:600;">데모 보기</button></div></div></div>`,
+
+  button: `<div style="padding:32px;background:#fafafa;font-family:-apple-system,sans-serif;display:flex;flex-direction:column;gap:24px;"><div><p style="font-size:12px;color:#999;margin-bottom:12px;font-weight:600;text-transform:uppercase;">Primary</p><div style="display:flex;gap:12px;flex-wrap:wrap;"><button style="padding:10px 20px;background:#6B46C1;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;">기본</button><button style="padding:10px 20px;background:#7C3AED;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;">호버</button><button style="padding:10px 20px;background:#ccc;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;">비활성</button></div></div><div><p style="font-size:12px;color:#999;margin-bottom:12px;font-weight:600;text-transform:uppercase;">Outline</p><div style="display:flex;gap:12px;flex-wrap:wrap;"><button style="padding:10px 20px;background:transparent;color:#6B46C1;border:2px solid #6B46C1;border-radius:8px;font-size:14px;font-weight:600;">기본</button><button style="padding:10px 20px;background:transparent;color:#e11d48;border:2px solid #e11d48;border-radius:8px;font-size:14px;font-weight:600;">위험</button><button style="padding:10px 20px;background:transparent;color:#16a34a;border:2px solid #16a34a;border-radius:8px;font-size:14px;font-weight:600;">성공</button></div></div></div>`,
+
+  form: `<div style="min-height:100vh;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif;"><div style="width:400px;background:white;border-radius:20px;padding:40px;box-shadow:0 8px 40px rgba(0,0,0,0.1);"><h2 style="font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:6px;text-align:center;">로그인</h2><p style="font-size:14px;color:#888;text-align:center;margin-bottom:32px;">계정에 로그인하세요</p><div style="margin-bottom:16px;"><label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:6px;">이메일</label><div style="padding:12px 16px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;color:#999;">이메일을 입력하세요</div></div><div style="margin-bottom:24px;"><label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:6px;">비밀번호</label><div style="padding:12px 16px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;color:#999;">비밀번호를 입력하세요</div></div><button style="width:100%;padding:14px;background:linear-gradient(135deg,#6B46C1,#7C3AED);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;margin-bottom:16px;">로그인</button><p style="text-align:center;font-size:13px;color:#888;">계정이 없으신가요? <span style="color:#6B46C1;font-weight:600;">회원가입</span></p></div></div>`,
+
+  nav: `<nav style="width:100%;background:white;border-bottom:1px solid #f0f0f0;padding:0 40px;height:60px;display:flex;align-items:center;justify-content:space-between;font-family:-apple-system,sans-serif;box-shadow:0 1px 8px rgba(0,0,0,0.05);"><div style="display:flex;align-items:center;gap:8px;"><div style="width:32px;height:32px;background:linear-gradient(135deg,#6B46C1,#8B5CF6);border-radius:8px;"></div><span style="font-size:16px;font-weight:700;color:#1a1a1a;">Astar</span></div><div style="display:flex;gap:32px;"><a style="text-decoration:none;font-size:14px;font-weight:500;color:#6B46C1;">홈</a><a style="text-decoration:none;font-size:14px;font-weight:500;color:#666;">서비스</a><a style="text-decoration:none;font-size:14px;font-weight:500;color:#666;">가격</a></div><div style="display:flex;gap:12px;"><button style="padding:8px 16px;background:transparent;color:#666;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;font-weight:500;">로그인</button><button style="padding:8px 16px;background:#6B46C1;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;">시작하기</button></div></nav>`,
+
+  dashboard: `<div style="padding:32px;background:#f8f7ff;font-family:-apple-system,sans-serif;min-width:700px;"><h2 style="font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:20px;">대시보드</h2><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;"><div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);"><div style="display:flex;justify-content:space-between;margin-bottom:12px;"><span style="font-size:13px;color:#888;">총 사용자</span><span style="font-size:11px;background:#f0fdf4;color:#16a34a;padding:3px 8px;border-radius:6px;font-weight:600;">+12%</span></div><div style="font-size:28px;font-weight:800;color:#1a1a1a;">24,521</div></div><div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);"><div style="display:flex;justify-content:space-between;margin-bottom:12px;"><span style="font-size:13px;color:#888;">매출</span><span style="font-size:11px;background:#f0fdf4;color:#16a34a;padding:3px 8px;border-radius:6px;font-weight:600;">+8%</span></div><div style="font-size:28px;font-weight:800;color:#1a1a1a;">₩4.2M</div></div><div style="background:white;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);"><div style="display:flex;justify-content:space-between;margin-bottom:12px;"><span style="font-size:13px;color:#888;">전환율</span><span style="font-size:11px;background:#fff1f2;color:#e11d48;padding:3px 8px;border-radius:6px;font-weight:600;">-2%</span></div><div style="font-size:28px;font-weight:800;color:#1a1a1a;">3.8%</div></div></div></div>`
+};
+
+function loadExample(name) {
+  const html = EXAMPLES[name];
+  if (!html) return;
+  currentHTML = html;
+  currentSource = 'upload';
+  document.getElementById('html-input').value = html;
+  switchTab('upload');
+  dropZone.classList.remove('has-file');
+  dropZone.querySelector('.drop-title').textContent = name + ' 예시 로드됨';
+  dropZone.classList.add('has-file');
+  document.getElementById('file-name-label').textContent = '✓ ' + name + ' 예시';
+  document.getElementById('js-warning').style.display = 'none';
+  renderPreview(html, 'preview-iframe', 'preview-wrap', 'preview-size');
+  showStatus('예시 템플릿 로드 완료', 'success');
 }
 
-// ─── UI Helpers ───────────────────────────────────────────────────────────────
+// ── UI Helpers ────────────────────────────────────────────────────────────────
 function showStatus(msg, type) {
   const el = document.getElementById('status');
   el.className = 'status ' + type;
-  const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : '◆';
-  el.innerHTML = `<span class="dot-pulse" style="${type !== 'loading' ? 'display:none' : ''}"></span>${icon} ${msg}`;
+  const icon = type === 'loading' ? '<span class="spinner"></span>' : (type === 'success' ? '✓' : '✕');
+  el.innerHTML = `${icon} ${msg}`;
 }
 
-function setLoading(loading) {
-  document.getElementById('import-btn').disabled = loading;
-  const bar = document.getElementById('progress-bar');
-  bar.style.display = loading ? 'block' : 'none';
-  if (loading) setProgress(30);
+function setLoading(on) {
+  document.getElementById('import-btn').disabled = on;
+  document.getElementById('progress-bar').style.display = on ? 'block' : 'none';
+  if (on) setProgress(10);
 }
 
 function setProgress(pct) {
   document.getElementById('progress-fill').style.width = pct + '%';
 }
 
-// ─── Plugin Messages ───────────────────────────────────────────────────────────
-window.onmessage = (event) => {
-  const msg = event.data.pluginMessage;
+// ── Plugin Messages ───────────────────────────────────────────────────────────
+window.onmessage = e => {
+  const msg = e.data.pluginMessage;
   if (!msg) return;
-
   setLoading(false);
   setProgress(100);
-
-  if (msg.type === 'success') {
-    showStatus(msg.message, 'success');
-  } else if (msg.type === 'error') {
-    showStatus('오류: ' + msg.message, 'error');
-  }
+  if (msg.type === 'success') showStatus(msg.message, 'success');
+  else if (msg.type === 'error') showStatus('오류: ' + msg.message, 'error');
 };
 
-// Auto preview on paste
+// Auto preview textarea
 document.getElementById('html-input').addEventListener('input', function() {
   clearTimeout(this._t);
-  this._t = setTimeout(previewHTML, 800);
+  this._t = setTimeout(() => previewFromTextarea(), 900);
 });
 </script>
 </body>
