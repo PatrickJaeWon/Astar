@@ -32,6 +32,8 @@ export interface ElementData {
   display: string;
   overflow: string;
   boxShadow: string;
+  // Image (base64 data URL)
+  imageData?: string;
   // Children
   children: ElementData[];
 }

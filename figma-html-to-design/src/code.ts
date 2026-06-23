@@ -90,8 +90,21 @@ async function createElement(el: ElementData, scale: number): Promise<SceneNode 
     }
   }
 
-  // Image placeholder fill
-  if (isImagePlaceholder) {
+  // Image fill — real data takes priority over gray placeholder
+  if (el.imageData) {
+    try {
+      const base64 = el.imageData.replace(/^data:[^;]+;base64,/, '');
+      const binaryStr = atob(base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+      const img = figma.createImage(bytes);
+      frame.fills = [{ type: 'IMAGE', imageHash: img.hash, scaleMode: 'FILL' }];
+    } catch (_e) {
+      if (isImagePlaceholder) {
+        frame.fills = [{ type: 'SOLID', color: { r: 0.85, g: 0.85, b: 0.85 } }];
+      }
+    }
+  } else if (isImagePlaceholder) {
     frame.fills = [{ type: 'SOLID', color: { r: 0.85, g: 0.85, b: 0.85 } }];
     frame.name = 'img';
   }

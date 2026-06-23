@@ -349,25 +349,31 @@ function buildInjectedScript(minSize, waitMs, canvasWidth, canvasHeight) {
     return m?{r:+m[1]/255,g:+m[2]/255,b:+m[3]/255,a:m[4]!=null?+m[4]:1}:{r:0,g:0,b:0,a:0};
   }
 
-  var GRAY={r:0.82,g:0.82,b:0.82,a:1};
-
-  function getBg(s,tagName){
+  function getBg(s){
     var bg=s.backgroundColor;
     if(bg&&bg!=='rgba(0, 0, 0, 0)')return toRGBA(bg);
     var bi=s.backgroundImage;
     if(bi&&bi!=='none'){
-      // 그라디언트에서 첫 번째 색상 추출
       var m=bi.match(/rgba?\\([^)]+\\)|#[0-9a-fA-F]{3,8}/);
       if(m)return toRGBA(m[0]);
-      // url(...) 이미지 배경 → 회색 플레이스홀더
-      if(bi.indexOf('url(')>=0)return GRAY;
     }
-    // img 태그 자체도 회색 플레이스홀더
-    if(tagName==='IMG')return GRAY;
     return{r:0,g:0,b:0,a:0};
   }
 
-  function walk(el,bx,by){
+  async function fetchBase64(url){
+    try{
+      var resp=await fetch(url);
+      var blob=await resp.blob();
+      return await new Promise(function(res,rej){
+        var reader=new FileReader();
+        reader.onload=function(){res(reader.result);};
+        reader.onerror=function(e){rej(e);};
+        reader.readAsDataURL(blob);
+      });
+    }catch(e){return null;}
+  }
+
+  async function walk(el,bx,by){
     try{
       var r=el.getBoundingClientRect();
       if(r.width<MIN||r.height<MIN)return null;
@@ -375,10 +381,17 @@ function buildInjectedScript(minSize, waitMs, canvasWidth, canvasHeight) {
       if(s.display==='none'||s.visibility==='hidden')return null;
       var txt='';
       for(var i=0;i<el.childNodes.length;i++)if(el.childNodes[i].nodeType===3)txt+=el.childNodes[i].textContent;
+      var imageData=null;
+      var bi=s.backgroundImage;
+      if(bi&&bi!=='none'&&bi.indexOf('url(')>=0){
+        var um=bi.match(/url\\(["']?([^"')]+)["']?\\)/);
+        if(um)imageData=await fetchBase64(um[1]);
+      }
+      if(el.tagName==='IMG'&&el.src&&!imageData)imageData=await fetchBase64(el.src);
       var d={
         tagName:el.tagName,id:el.id||'',
         x:r.left-bx,y:r.top-by,width:r.width,height:r.height,
-        backgroundColor:getBg(s,el.tagName),
+        backgroundColor:getBg(s),
         borderRadius:parseFloat(s.borderTopLeftRadius)||0,
         borderWidth:parseFloat(s.borderTopWidth)||0,
         borderColor:toRGBA(s.borderTopColor),
@@ -394,39 +407,36 @@ function buildInjectedScript(minSize, waitMs, canvasWidth, canvasHeight) {
         textDecoration:s.textDecorationLine||'none',
         display:s.display,overflow:s.overflow,
         boxShadow:s.boxShadow||'none',
+        imageData:imageData,
         children:[]
       };
-      for(var j=0;j<el.children.length;j++){var c=walk(el.children[j],bx,by);if(c)d.children.push(c);}
+      var childArr=Array.from(el.children);
+      var childResults=await Promise.all(childArr.map(function(c){return walk(c,bx,by);}));
+      childResults.forEach(function(c){if(c)d.children.push(c);});
       return d;
     }catch(e){return null;}
   }
 
   var SKIP={'__ftr_inject':1,'__bundler_loading':1,'__bundler_thumbnail':1,'__bundler_err':1};
 
-  function run(){
+  async function run(){
     try{
       var body=document.body;
       if(!body){window.parent.postMessage({type:'__ftr',error:'body 없음'},'*');return;}
       var br=body.getBoundingClientRect();
-      var els=[];
-      for(var i=0;i<body.children.length;i++){
-        var ch=body.children[i];
-        if(SKIP[ch.id])continue;
-        var d=walk(ch,br.left,br.top);
-        if(d)els.push(d);
-      }
+      var childArr=Array.from(body.children).filter(function(ch){return!SKIP[ch.id];});
+      var results=await Promise.all(childArr.map(function(ch){return walk(ch,br.left,br.top);}));
+      var els=results.filter(function(d){return d!==null;});
       window.parent.postMessage({type:'__ftr',elements:els,cw:CW,ch:CH},'*');
     }catch(e){
       window.parent.postMessage({type:'__ftr',error:String(e)},'*');
     }
   }
 
-  // window.load 이후 WAIT ms 대기 → traverse
-  // documentElement가 교체되어도 window는 유지되므로 이 리스너는 동작합니다
   if(document.readyState==='complete'){
-    setTimeout(run,WAIT);
+    setTimeout(function(){run();},WAIT);
   } else {
-    window.addEventListener('load',function(){setTimeout(run,WAIT);});
+    window.addEventListener('load',function(){setTimeout(function(){run();},WAIT);});
   }
 })();
 <\/scr` + `ipt>`;
