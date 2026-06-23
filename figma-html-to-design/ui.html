@@ -349,11 +349,21 @@ function buildInjectedScript(minSize, waitMs, canvasWidth, canvasHeight) {
     return m?{r:+m[1]/255,g:+m[2]/255,b:+m[3]/255,a:m[4]!=null?+m[4]:1}:{r:0,g:0,b:0,a:0};
   }
 
-  function getBg(s){
+  var GRAY={r:0.82,g:0.82,b:0.82,a:1};
+
+  function getBg(s,tagName){
     var bg=s.backgroundColor;
     if(bg&&bg!=='rgba(0, 0, 0, 0)')return toRGBA(bg);
     var bi=s.backgroundImage;
-    if(bi&&bi!=='none'){var m=bi.match(/rgba?\\([^)]+\\)|#[0-9a-fA-F]{3,8}/);if(m)return toRGBA(m[0]);}
+    if(bi&&bi!=='none'){
+      // 그라디언트에서 첫 번째 색상 추출
+      var m=bi.match(/rgba?\\([^)]+\\)|#[0-9a-fA-F]{3,8}/);
+      if(m)return toRGBA(m[0]);
+      // url(...) 이미지 배경 → 회색 플레이스홀더
+      if(bi.indexOf('url(')>=0)return GRAY;
+    }
+    // img 태그 자체도 회색 플레이스홀더
+    if(tagName==='IMG')return GRAY;
     return{r:0,g:0,b:0,a:0};
   }
 
@@ -368,7 +378,7 @@ function buildInjectedScript(minSize, waitMs, canvasWidth, canvasHeight) {
       var d={
         tagName:el.tagName,id:el.id||'',
         x:r.left-bx,y:r.top-by,width:r.width,height:r.height,
-        backgroundColor:getBg(s),
+        backgroundColor:getBg(s,el.tagName),
         borderRadius:parseFloat(s.borderTopLeftRadius)||0,
         borderWidth:parseFloat(s.borderTopWidth)||0,
         borderColor:toRGBA(s.borderTopColor),
