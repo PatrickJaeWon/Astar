@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "Figma plugin to import HTML/CSS designs from Claude into Figma",
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch"
+    "build": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es6 --platform=browser",
+    "watch": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es6 --platform=browser --watch"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.90.4",
+    "esbuild": "^0.28.1",
     "typescript": "^5.3.3"
   }
 }
