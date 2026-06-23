@@ -410,8 +410,10 @@ function buildInjectedScript(minSize, waitMs, canvasWidth, canvasHeight) {
         imageData:imageData,
         children:[]
       };
+      // 자식 요소는 현재 요소(r.left, r.top)를 기준 오프셋으로 사용
+      // → Figma에서 자식 위치는 부모 프레임 기준 상대 좌표여야 하기 때문
       var childArr=Array.from(el.children);
-      var childResults=await Promise.all(childArr.map(function(c){return walk(c,bx,by);}));
+      var childResults=await Promise.all(childArr.map(function(c){return walk(c,r.left,r.top);}));
       childResults.forEach(function(c){if(c)d.children.push(c);});
       return d;
     }catch(e){return null;}
@@ -424,10 +426,11 @@ function buildInjectedScript(minSize, waitMs, canvasWidth, canvasHeight) {
       var body=document.body;
       if(!body){window.parent.postMessage({type:'__ftr',error:'body 없음'},'*');return;}
       var br=body.getBoundingClientRect();
+      var rw=window.innerWidth||CW;
       var childArr=Array.from(body.children).filter(function(ch){return!SKIP[ch.id];});
       var results=await Promise.all(childArr.map(function(ch){return walk(ch,br.left,br.top);}));
       var els=results.filter(function(d){return d!==null;});
-      window.parent.postMessage({type:'__ftr',elements:els,cw:CW,ch:CH},'*');
+      window.parent.postMessage({type:'__ftr',elements:els,cw:CW,ch:CH,renderWidth:rw},'*');
     }catch(e){
       window.parent.postMessage({type:'__ftr',error:String(e)},'*');
     }
@@ -510,7 +513,7 @@ function importToFigma() {
     setProgress(90);
     showStatus(countElements(elements) + '개 요소를 Figma로 전송 중...', 'loading');
     parent.postMessage({
-      pluginMessage: { type: 'import-html', elements, canvasWidth: e.data.cw, canvasHeight: e.data.ch }
+      pluginMessage: { type: 'import-html', elements, canvasWidth: e.data.cw, canvasHeight: e.data.ch, renderWidth: e.data.renderWidth || renderWidth }
     }, '*');
   };
 

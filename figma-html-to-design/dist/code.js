@@ -36,14 +36,14 @@
       figma.ui.onmessage = (msg) => __async(null, null, function* () {
         if (msg.type === "import-html") {
           try {
-            yield importElements(msg.elements, msg.canvasWidth, msg.canvasHeight);
+            yield importElements(msg.elements, msg.canvasWidth, msg.canvasHeight, msg.renderWidth);
             figma.ui.postMessage({ type: "success", message: "Design imported successfully!" });
           } catch (err) {
             figma.ui.postMessage({ type: "error", message: String(err) });
           }
         }
       });
-      function importElements(elements, canvasWidth, canvasHeight) {
+      function importElements(elements, canvasWidth, canvasHeight, renderWidth) {
         return __async(this, null, function* () {
           const rootFrame = figma.createFrame();
           rootFrame.name = "Claude Design Import";
@@ -53,9 +53,8 @@
           const viewport = figma.viewport.center;
           rootFrame.x = viewport.x - rootFrame.width / 2;
           rootFrame.y = viewport.y - rootFrame.height / 2;
-          const scaleX = rootFrame.width / canvasWidth;
-          const scaleY = rootFrame.height / canvasHeight;
-          const scale = Math.min(scaleX, scaleY);
+          const rw = renderWidth || canvasWidth || 1440;
+          const scale = (canvasWidth || 1440) / rw;
           for (const el of elements) {
             const node = yield createElement(el, scale);
             if (node) {

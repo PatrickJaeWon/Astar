@@ -39,7 +39,7 @@ export interface ElementData {
 }
 
 export type PluginMessage =
-  | { type: 'import-html'; elements: ElementData[]; canvasWidth: number; canvasHeight: number }
+  | { type: 'import-html'; elements: ElementData[]; canvasWidth: number; canvasHeight: number; renderWidth: number }
   | { type: 'error'; message: string }
   | { type: 'success'; message: string }
   | { type: 'notify'; message: string };

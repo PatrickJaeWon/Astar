@@ -5,7 +5,7 @@ figma.showUI(__html__, { width: 520, height: 700, title: 'Claude HTML to Figma D
 figma.ui.onmessage = async (msg: PluginMessage) => {
   if (msg.type === 'import-html') {
     try {
-      await importElements(msg.elements, msg.canvasWidth, msg.canvasHeight);
+      await importElements(msg.elements, msg.canvasWidth, msg.canvasHeight, msg.renderWidth);
       figma.ui.postMessage({ type: 'success', message: 'Design imported successfully!' });
     } catch (err) {
       figma.ui.postMessage({ type: 'error', message: String(err) });
@@ -16,7 +16,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 async function importElements(
   elements: ElementData[],
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
+  renderWidth: number
 ): Promise<void> {
   const rootFrame = figma.createFrame();
   rootFrame.name = 'Claude Design Import';
@@ -28,9 +29,9 @@ async function importElements(
   rootFrame.x = viewport.x - rootFrame.width / 2;
   rootFrame.y = viewport.y - rootFrame.height / 2;
 
-  const scaleX = rootFrame.width / canvasWidth;
-  const scaleY = rootFrame.height / canvasHeight;
-  const scale = Math.min(scaleX, scaleY);
+  // 렌더링 너비(iframe) → Figma 캔버스 너비 변환 비율
+  const rw = renderWidth || canvasWidth || 1440;
+  const scale = (canvasWidth || 1440) / rw;
 
   for (const el of elements) {
     const node = await createElement(el, scale);
